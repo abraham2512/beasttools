@@ -7,7 +7,6 @@ import akka.http.scaladsl.server.Route
 import scala.concurrent.Future
 import akka.actor.typed.scaladsl.AskPattern.{Askable, schedulerFromActorSystem}
 import akka.actor.typed.{ActorRef, ActorSystem}
-//import akka.http.scaladsl.server.Directives.{as, complete, concat, entity, get, onSuccess, pathEnd, pathPrefix, post}
 import akka.util.Timeout
 import beasttools.FileRegistry._
 
@@ -19,9 +18,9 @@ class FileRoutes(fileRegistry: ActorRef[FileRegistry.Command])(implicit val syst
   //#file-route-class
 
   //#implicit default timeout value for all requests
-  private implicit val timeout = Timeout.create(system.settings.config.getDuration("my-app.routes.ask-timeout"))
+  private implicit val timeout: Timeout = Timeout.create(system.settings.config.getDuration("my-app.routes.ask-timeout"))
 
-  def getFiles(): Future[Files] =
+  def getFiles: Future[Files] =
     fileRegistry.ask(GetFiles)
   def createFile(file: File) : Future[FileActionPerformed] =
     fileRegistry.ask(CreateFile(file,_))
@@ -35,7 +34,7 @@ class FileRoutes(fileRegistry: ActorRef[FileRegistry.Command])(implicit val syst
       pathEnd {
         concat(
           get {
-            complete(getFiles())
+            complete(getFiles)
           },
           post {
             entity(as[File]){ file =>
