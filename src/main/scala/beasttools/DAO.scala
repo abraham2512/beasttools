@@ -7,10 +7,12 @@ class DAO(val profile: JdbcProfile) {
   import profile.api._
   //#dao
 
-  class Props(tag: Tag) extends Table[(String, String)](tag, "PROPS") {
-    def key = column[String]("KEY", O.PrimaryKey)
-    def value = column[String]("VALUE")
-    def * = (key, value)
+  class Props(tag: Tag) extends Table[(String, String, String, String)](tag, "PROPS") {
+    def filename = column[String]("filename", O.PrimaryKey)
+    def filetype = column[String]("filetype")
+    def filesource = column[String]("filesource")
+    def filestatus = column[String]("filestatus")
+    def * = (filename,filetype,filesource,filestatus)
   }
   val props = TableQuery[Props]
 
@@ -19,12 +21,16 @@ class DAO(val profile: JdbcProfile) {
     props.schema.create
 
   /** Insert a key/value pair */
-  def insert(k: String, v: String): DBIO[Int] =
-    props += (k, v)
+  def insert(filename: String, filetype:String, filesource: String, filestatus: String): DBIO[Int] =
+    props += (filename,filetype,filesource,filestatus)
 
   /** Get the value for the given key */
   def get(k: String): DBIO[Option[String]] =
-    (for(p <- props if p.key === k) yield p.value).result.headOption
+    (for(p <- props if p.filename === k) yield p.filesource).result.headOption
+
+  /** Get all values */
+  def get_all(): DBIO[Option[String]] =
+    (for(p <- props ) yield p.filename).result.headOption
 
   /** Get the first element for a Query from this DAO */
   def getFirst[M, U, C[_]](q: Query[M, U, C]): DBIO[U] =

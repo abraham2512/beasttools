@@ -25,50 +25,48 @@ object FileRegistry {
   final case class CreateFile(file: File, replyTo: ActorRef[FileActionPerformed]) extends Command
   //final case class GetFileResponse(maybeFile: Option[File])
   final case class FileActionPerformed(description:String)
+//  val dao = new DAO(H2Profile)
+//  val h2db = Database.forConfig("h2")
+//  def apply(): Unit = {
+//    println("DAO Object created!")
+//    registry(Set.empty)
+//    val f = RunDBIO.create_db(dao,h2db)
+//    Await.result(f, Duration.Inf)
+//  }
 
-  def apply(): Behavior[Command] = registry(Set.empty)
-  //def apply(): Behavior[Command] =
+  def apply(): Behavior[Command] = {
+    DAL()
+    registry(Set.empty)
+  }
 
 
-  private def registry(files: Set[File]): Behavior[Command] =
+  private def registry(files: Set[File]): Behavior[Command] = {
+    sealed trait Query
     Behaviors.receiveMessage {
       case GetFiles(replyTo) =>
+        try {
+          val f = DAL.get_all()
+          Await.result(f, Duration.Inf)
+          print(f)
+        } finally
+          println("Database operation complete!")
+
         replyTo ! Files(files.toSeq)
         Behaviors.same
       case CreateFile(file,replyTo) =>
         try {
-          //#create
-          val f = {
-            val h2db = Database.forConfig("h2")
-            RunDBIO.run(new DAO(H2Profile), h2db).andThen { case _ => h2db.close }
-          }
-          //#create
+          val f = DAL.insert(file)
           Await.result(f, Duration.Inf)
         } finally
           println("Database operation complete!")
           replyTo ! FileActionPerformed(s"File ${file.filename} created!")
           registry(files + file)
-
-
+  }
   }
 }
 
 
-object RunDBIO {
-  //#run
-  def run(dao: DAO, db: Database): Future[Unit] = {
-    val h = new DAOHelper(dao)
-    println("Using profile " + dao.profile)
-    //#run
-    db.run(DBIO.seq(
-      dao.create,
-      dao.insert("foo", "bar"),
-      dao.get("foo").map(r => println("- Value for key 'foo': " + r)),
-      dao.get("baz").map(r => println("- Value for key 'baz': " + r)),
-      h.dao.getFirst(h.restrictKey("foo", dao.props)).map(r => println("- Using the helper: " + r))
-    ).withPinnedSession)
-  }
-}
+
 
 
 
