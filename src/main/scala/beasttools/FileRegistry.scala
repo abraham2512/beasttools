@@ -7,8 +7,8 @@ import akka.actor.typed.scaladsl.Behaviors
 
 import scala.collection.immutable
 import scala.concurrent.{Await, Future}
-import scala.concurrent.duration.{Duration, DurationInt}
-import scala.util.{Failure, Success}
+import scala.concurrent.duration.Duration
+
 
 
 //#case classes
@@ -21,51 +21,61 @@ final case class Files(files: immutable.Seq[File])
 object FileRegistry {
   //#actor protocol
   sealed trait Command
-
   final case class GetFiles(replyTo: ActorRef[Files]) extends Command
   final case class GetFile(filename: String,replyTo: ActorRef[File]) extends Command
 
   final case class CreateFile(file: File, replyTo: ActorRef[FileActionPerformed]) extends Command
-
   final case class FileActionPerformed(description:String)
 
-  //implicit  val ec = ExecutionContext.global
   def apply(): Behavior[Command] = {
     DAL()
-    registry(Set.empty)
+    registry
   }
 
-
-  private def registry(files: Set[File]): Behavior[Command] = {
+  private def registry: Behavior[Command] = {
     Behaviors.receiveMessage {
-      case GetFile(filename,replyTo)  => {
-        val f = DAL.get(filename)
-        //println(f)
-        //val ft = File("test", "test", "test", "test")
-        replyTo ! f
-        Behaviors.same
+      //GET FILE with filename implemented here
+      case GetFile(filename,replyTo)  =>
+        try{
+          val f = DAL.get(filename)
+          val file_data = f.get
+          val returnFile = File(file_data._1,file_data._2,file_data._3,file_data._4)
+          replyTo ! returnFile
+          Behaviors.same
+        } catch {
+          case e : NoSuchElementException =>
+            println("No Such Element")
+            //File("", "", "", "")
+            replyTo ! File("", "", "", "")
+            Behaviors.same
+
         }
+        finally {
+          println("Get File complete")
+        }
+
+      //GET ALL FILES implemented here
       case GetFiles(replyTo) =>
         try {
-          val f: Future[Unit] = DAL.get_all()
-          //f.onComplete { case _ => print(_)}
-          Await.result(f, Duration.Inf)
-//          print("here")
-
-        } finally
+          val f: Seq[(String,String,String,String)]= DAL.get_all()
+          val files_data = f.map(f=> File(f._1,f._2,f._3,f._4))
+          replyTo ! Files(files_data)
+          Behaviors.same
+        } finally {
           println("Database get all complete!")
+        }
 
-        replyTo ! Files(files.toSeq)
-        Behaviors.same
+
+      // CREATE FILE implemented here
       case CreateFile(file,replyTo) =>
         try {
           val f = DAL.insert(file)
           Await.result(f, Duration.Inf)
-
-        } finally
-          println("Database insert complete!")
           replyTo ! FileActionPerformed(s"File ${file.filename} created!")
-          registry(files + file)
+          Behaviors.same
+        } finally {
+          println("Database insert complete!")
+        }
 
     }
   }

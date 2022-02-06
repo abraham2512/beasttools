@@ -29,8 +29,8 @@ class DAO(val profile: JdbcProfile) {
     (for(p <- props if p.filename === k) yield p ).result.headOption
 
   /** Get all values */
-  def get_all(): DBIO[Option[String]] =
-    (for(p <- props ) yield p.filename).result.headOption
+  def get_all(): DBIO[Seq[(String,String,String,String)]] =
+    (for(p <- props ) yield p).result.withPinnedSession
 
   /** Get the first element for a Query from this DAO */
   def getFirst[M, U, C[_]](q: Query[M, U, C]): DBIO[U] =
