@@ -8,8 +8,10 @@ import slick.jdbc.JdbcBackend.Database
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.Duration
+import scala.util.{Failure, Success}
 
 object DAL {
+    //sealed trait QueryResult
     private val dao = new DAO(H2Profile)
     private val db = Database.forConfig("h2")
     def apply(): Unit = {
@@ -33,4 +35,29 @@ object DAL {
         dao.get_all().map(r => println("Values " + r))
       ).withPinnedSession)
     }
+//    def get(k:String): Future[Unit] = {
+//      db.run(DBIO.seq(
+//          dao.get(k)
+//      ))
+//    }
+  def get(k:String): File = {
+  try{
+    val f : Future[Option[(String,String,String,String)]] = db.run(dao.get(k))
+    val result = Await.result(f,Duration.Inf)
+    val file_data = result.get
+    val returnFile = File(file_data._1,file_data._2,file_data._3,file_data._4)
+
+    //    f.onComplete {
+//      case Success(value) => {
+//        println("success" + value)
+//        val file = value.get
+//        }
+//
+//      }
+    returnFile
+    }
+  }
+//  val returnFile:File = File("","","","")
+//
+//  returnFile
 }

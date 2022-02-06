@@ -25,8 +25,8 @@ class DAO(val profile: JdbcProfile) {
     props += (filename,filetype,filesource,filestatus)
 
   /** Get the value for the given key */
-  def get(k: String): DBIO[Option[String]] =
-    (for(p <- props if p.filename === k) yield p.filesource).result.headOption
+  def get(k: String): DBIO[Option[(String,String,String,String)]] =
+    (for(p <- props if p.filename === k) yield p ).result.headOption
 
   /** Get all values */
   def get_all(): DBIO[Option[String]] =

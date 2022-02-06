@@ -22,30 +22,43 @@ class FileRoutes(fileRegistry: ActorRef[FileRegistry.Command])(implicit val syst
 
   def getFiles: Future[Files] =
     fileRegistry.ask(GetFiles)
-  def createFile(file: File) : Future[FileActionPerformed] =
-    fileRegistry.ask(CreateFile(file,_))
 
+  def createFile(file: File): Future[FileActionPerformed] =
+    fileRegistry.ask(CreateFile(file, _))
+
+  def getFile(filename: String): Future[File] =
+    fileRegistry.ask(GetFile(filename, _))
   //#all-routes
 
   val fileRoutes: Route =
-    pathPrefix("files"){
+    pathPrefix("files") {
       concat(
         //#files-create-and-list
-      pathEnd {
-        concat(
-          get {
-            complete(getFiles)
-          },
-          post {
-            entity(as[File]){ file =>
-              onSuccess(createFile(file)) { performed =>
-                complete((StatusCodes.Created, performed))
+        pathEnd {
+          concat(
+            get {
+              complete(getFiles)
+            },
+            post {
+              entity(as[File]) { file =>
+                onSuccess(createFile(file)) { performed =>
+                  complete((StatusCodes.Created, performed))
+                }
               }
-
             }
-          }
-        )
-      }
-      )
+          )
+        },
+        // #return file requested
+        path(Segment) { filename =>
+          concat(
+            get {
+              rejectEmptyResponse {
+                onSuccess(getFile(filename)) { response =>
+                  complete(StatusCodes.OK, response)
+                }
+              }
+            }
+          )
+        })
     }
 }
