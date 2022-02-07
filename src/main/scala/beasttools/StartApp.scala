@@ -29,9 +29,12 @@ object StartApp {
       val rootBehavior = Behaviors.setup[Nothing] { context =>
         val fileRegistryActor = context.spawn(FileRegistry(), "FileRegistryActor")
         context.watch(fileRegistryActor)
-
         val routes = new FileRoutes(fileRegistryActor)(context.system)
         startHttpServer(routes.fileRoutes)(context.system)
+
+
+        val hdfsRegistryActor = context.spawn(HdfsRegistry(),"HdfsRegistryActor")
+        context.watch(hdfsRegistryActor)
 
         Behaviors.empty
       }

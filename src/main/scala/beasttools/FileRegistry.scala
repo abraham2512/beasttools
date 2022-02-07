@@ -1,13 +1,13 @@
 package beasttools
 
 //#file-registry-actor
-import akka.actor.typed.ActorRef
-import akka.actor.typed.Behavior
+import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.Behaviors
+import beasttools.HdfsRegistry.HDFSActionPerformed
 
 import scala.collection.immutable
-import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, Future}
 
 
 
@@ -27,7 +27,11 @@ object FileRegistry {
   final case class CreateFile(file: File, replyTo: ActorRef[FileActionPerformed]) extends Command
   final case class FileActionPerformed(description:String)
 
+  final case class Write_to_hdfs(replyTo: ActorRef[HDFSActionPerformed]) extends Command
+
+
   def apply(): Behavior[Command] = {
+    println("File Actor Born!")
     DAL()
     registry
   }
@@ -36,7 +40,7 @@ object FileRegistry {
     Behaviors.receiveMessage {
       //GET FILE with filename implemented here
       case GetFile(filename,replyTo)  =>
-        try{
+        try {
           val f = DAL.get(filename)
           val file_data = f.get
           val returnFile = File(file_data._1,file_data._2,file_data._3,file_data._4)
@@ -70,13 +74,13 @@ object FileRegistry {
       case CreateFile(file,replyTo) =>
         try {
           val f = DAL.insert(file)
-          Await.result(f, Duration.Inf)
+          Await.result(f, Duration.Inf) //MOVE THIS TO DAL file
           replyTo ! FileActionPerformed(s"File ${file.filename} created!")
           Behaviors.same
         } finally {
+          //ASK HDFS Actor from here
           println("Database insert complete!")
         }
-
     }
   }
 }
