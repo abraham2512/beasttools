@@ -1,15 +1,12 @@
 package beasttools
 
 //#file-registry-actor
-import akka.actor.typed.{ActorRef, Behavior}
+import akka.actor.typed.{ActorRef, ActorSystem, Behavior}
 import akka.actor.typed.scaladsl.Behaviors
-import beasttools.HdfsRegistry.HDFSActionPerformed
 
 import scala.collection.immutable
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
-
-
 
 //#case classes
 case class File(filename:String, filetype:String, filesource:String, filestatus:String) {
@@ -26,8 +23,6 @@ object FileRegistry {
 
   final case class CreateFile(file: File, replyTo: ActorRef[FileActionPerformed]) extends Command
   final case class FileActionPerformed(description:String)
-
-  final case class Write_to_hdfs(replyTo: ActorRef[HDFSActionPerformed]) extends Command
 
 
   def apply(): Behavior[Command] = {
@@ -48,8 +43,7 @@ object FileRegistry {
           Behaviors.same
         } catch {
           case e : NoSuchElementException =>
-            println("No Such Element")
-            //File("", "", "", "")
+            println("No Such Element" + e.toString)
             replyTo ! File("", "", "", "")
             Behaviors.same
 
@@ -69,20 +63,23 @@ object FileRegistry {
           println("Database get all complete!")
         }
 
-
       // CREATE FILE implemented here
       case CreateFile(file,replyTo) =>
         try {
           val f = DAL.insert(file)
           Await.result(f, Duration.Inf) //MOVE THIS TO DAL file
+          HdfsRegistry.startHDFS(file.filesource)
           replyTo ! FileActionPerformed(s"File ${file.filename} created!")
           Behaviors.same
         } finally {
           //ASK HDFS Actor from here
+          //val fileName = "/Users/abraham/Downloads/Riverside_WaterDistrict2.csv"
           println("Database insert complete!")
+          Behaviors.same
         }
     }
   }
+
 }
 
 

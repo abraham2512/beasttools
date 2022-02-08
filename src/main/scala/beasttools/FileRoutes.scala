@@ -9,6 +9,7 @@ import akka.actor.typed.scaladsl.AskPattern.{Askable, schedulerFromActorSystem}
 import akka.actor.typed.{ActorRef, ActorSystem}
 import akka.util.Timeout
 import beasttools.FileRegistry._
+import beasttools.HdfsRegistry.{HdfsCommand, WriteToHdfs}
 
 
 

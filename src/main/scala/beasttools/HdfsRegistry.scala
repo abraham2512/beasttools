@@ -1,57 +1,70 @@
 package beasttools
 
-import akka.actor.typed.{ActorRef, Behavior}
+import akka.actor.typed.{ActorRef, ActorSystem, Behavior}
 import akka.actor.typed.scaladsl.Behaviors
 import org.apache.spark.sql.SparkSession
 
 import java.util.concurrent.TimeUnit
 
 object HdfsRegistry {
-  sealed trait Command
-  case class WriteToHDFS(replyTo: ActorRef[HDFSActionPerformed]) extends Command
-  final case class HDFSActionPerformed(description:String)
+  sealed trait HdfsCommand
+  //final case class WriteToHDFS(replyTo: ActorRef[HDFSActionPerformed]) extends HdfsCommand
+//  case class Request(query: String, replyTo: ActorRef[Response])
+//  case class Response(result: String)
 
-  def apply(): Behavior[Command] = {
+  final case class HDFSActionPerformed(description:String) extends HdfsCommand
+  final case class WriteToHdfs(replyTo: ActorRef[HDFSActionPerformed]) extends  HdfsCommand
+
+  //case val spark:SparkSession = SparkSession.builder().appName("HdfsTest").master("local[*]").getOrCreate()
+
+
+  def apply(): Behavior[HDFSActionPerformed] = {
     println("Hdfs Actor Born!")
-    hdfsRegistry
+    //hdfs_registry(HDFSActionPerformed("WriteToHdfs"))
+    //Behaviors.same
+    //hdfs_registry
+    //Behaviors.same
+    //val spark = SparkSession.builder().appName("HdfsTest").master("local[*]")
+    //spark.getOrCreate()
+    HDFSActionPerformed("START SUCCESS")
+    Behaviors.empty
+  }
+  def startHDFS(fileURI:String):HDFSActionPerformed = {
+    hdfs_registry(fileURI)
+    HDFSActionPerformed("Starting Spark Job")
   }
 
-  private def hdfsRegistry: Behavior[Command] = {
+  private def hdfs_registry(fileURI:String):HDFSActionPerformed = {
 
-    Behaviors.receiveMessage {
-      case WriteToHDFS(replyTo) => {
+//    Behaviors.receiveMessage {
+
+        //case WriteToHdfs(replyTo) => {
         try {
           println("STARTED SPARK JOB")
-          val fileURI = "/Users/abraham/Projects/Riverside_IntersectionPoints.geojson"
+          //val fileURI = "/Users/abraham/Downloads/Riverside_WaterDistrict2.csv"
           val spark = SparkSession
             .builder
-            //        .appName("HdfsTest")
-            .getOrCreate()
-          val file = spark.read.json(fileURI).rdd
-          val mapped = file.map(s => s.length).cache()
-          for (iter <- 1 to 10) {
-            val startTimeNs = System.nanoTime()
-            for (x <- mapped) {
-              x + 2
-            }
-            val durationMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTimeNs)
-            println(s"Iteration $iter took $durationMs ms")
-          }
-          println(s"File contents: ${file.map(_.toString).take(1).mkString(",").slice(0, 10)}")
-          println(s"Returned length(s) of: ${file.map(_.length).sum().toString}")
+            .appName("HdfsTest")
+            .master("local[*]").getOrCreate()
+          val df = spark.read.csv(fileURI)
+          df.show()
           spark.stop()
+          HDFSActionPerformed("Success")
         } catch {
           case e: NoClassDefFoundError =>
-            println("Could not get spark session")
+            println("Could not get spark session" + e.toString)
+            HDFSActionPerformed("Failure")
         } finally {
-          println("Good Bye :(")
-
+          println("Good Bye!")
+          HDFSActionPerformed("Exit")
         }
-        replyTo ! HDFSActionPerformed("FILE UPLOAD STARTED")
-        Behaviors.same
+        //replyTo ! HDFSActionPerformed(s"FILE UPLOAD STARTED")
+        //Behaviors.same
       }
-    }
-  }
+    //}
+
+  //}
+
 }
 
 
